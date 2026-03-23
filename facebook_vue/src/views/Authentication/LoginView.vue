@@ -138,32 +138,32 @@
                         <div class="col-span-full">Gender</div>
                         <div class="flex flex-col md:flex-row gap-2">
                           <prime_input_group>
-                            <prime_check_box
+                            <prime_radio_button
                               v-model="formSignup.gender"
-                              inputId="ingredient1"
+                              inputId="genderFemale"
                               name="gender"
                               value="Female"
                             />
-                            <label for="ingredient1" class="ml-2"> Female </label>
+                            <label for="genderFemale" class="ml-2"> Female </label>
                           </prime_input_group>
                           <prime_input_group>
-                            <prime_check_box
+                            <prime_radio_button
                               v-model="formSignup.gender"
-                              inputId="ingredient2"
+                              inputId="genderMale"
                               name="gender"
                               value="Male"
                             />
-                            <label for="ingredient2" class="ml-2"> Male </label>
+                            <label for="genderMale" class="ml-2"> Male </label>
                           </prime_input_group>
 
                           <prime_input_group>
-                            <prime_check_box
+                            <prime_radio_button
                               v-model="formSignup.gender"
-                              inputId="ingredient3"
+                              inputId="genderCustom"
                               name="gender"
                               value="Custom"
                             />
-                            <label for="ingredient3" class="ml-2"> Custom </label>
+                            <label for="genderCustom" class="ml-2"> Custom </label>
                           </prime_input_group>
                         </div>
                       </div>
@@ -292,14 +292,6 @@ export default {
     submitFormSignup() {
       this.errorsSignup = []
 
-      // استخراج اليوم، الشهر، والسنة من كائنات Date وتنسيقها
-      const day = this.day.getDate().toString().padStart(2, '0')
-      const month = (this.month.getMonth() + 1).toString().padStart(2, '0')
-      const year = this.year.getFullYear()
-
-      const formattedDate = `${year}-${month}-${day}`
-      this.formSignup.date_of_birth = formattedDate
-
       if (this.formSignup.name === '') {
         this.$toast.add({
           severity: 'error',
@@ -345,7 +337,31 @@ export default {
         })
         this.errorsSignup.push('The password does not match')
       }
+      if (!this.day || !this.month || !this.year) {
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Date of birth missing',
+          detail: 'Please select day, month and year',
+          life: 3000
+        })
+        this.errorsSignup.push('Date of birth is missing')
+      }
+      if (!this.formSignup.gender) {
+        this.$toast.add({
+          severity: 'error',
+          summary: 'Gender missing',
+          detail: 'Please select one gender option',
+          life: 3000
+        })
+        this.errorsSignup.push('Gender is missing')
+      }
       if (this.errorsSignup.length === 0) {
+        // استخراج اليوم، الشهر، والسنة من كائنات Date وتنسيقها
+        const day = this.day.getDate().toString().padStart(2, '0')
+        const month = (this.month.getMonth() + 1).toString().padStart(2, '0')
+        const year = this.year.getFullYear()
+        this.formSignup.date_of_birth = `${year}-${month}-${day}`
+
         axios
           .post('/api/signup/', this.formSignup)
           .then((response) => {
@@ -357,13 +373,14 @@ export default {
                   detail: 'Please activate your account by clicking the link sent to your email.',
                   life: 3000
                 })
+              } else if (response.data.auto_activated) {
+                this.$toast.add({
+                  severity: 'success',
+                  summary: 'User Registered',
+                  detail: 'Account created and activated successfully.',
+                  life: 3000
+                })
               }
-              this.$toast.add({
-                severity: 'success',
-                summary: 'User Is Registered',
-                detail: 'Please activate your account by clicking your email link',
-                life: 3000
-              })
               this.formSignup.name = ''
               this.formSignup.surname = ''
               this.formSignup.email = ''
@@ -371,27 +388,50 @@ export default {
               this.formSignup.gender = ''
               this.formSignup.password1 = ''
               this.formSignup.password2 = ''
+              this.day = ''
+              this.month = ''
+              this.year = ''
+              this.visible = false
               // this.$router.push('/loginView')
               window.location.reload()
             } else {
-              const data = JSON.parse(response.data.message)
-              this.$toast.add({
-                severity: 'error',
-                summary: 'Error Message',
-                detail: 'Message Content Something went wrong. Please try again',
-                life: 6000
-              })
+              const data = JSON.parse(response.data.message || '{}')
+              const errorMessages = []
+
               for (const key in data) {
-                this.errors.push(data[key][0].message)
+                if (Array.isArray(data[key]) && data[key][0]?.message) {
+                  errorMessages.push(data[key][0].message)
+                }
               }
-              console.log(`Bad`, this.formSignup.date_of_birth)
-              console.log(`Day`, this.day)
-              console.log(`month`, this.month)
-              console.log(`year`, this.year)
+
+              if (errorMessages.length === 0) {
+                errorMessages.push('Something went wrong. Please try again.')
+              }
+
+              errorMessages.forEach((message) => {
+                this.$toast.add({
+                  severity: 'error',
+                  summary: 'Error Message',
+                  detail: message,
+                  life: 6000
+                })
+              })
+
+              this.errorsSignup.push(...errorMessages)
             }
           })
           .catch((error) => {
             console.log('error', error)
+            const errorDetail =
+              error?.response?.data?.detail ||
+              error?.response?.data?.message ||
+              'Something went wrong. Please try again.'
+            this.$toast.add({
+              severity: 'error',
+              summary: 'Error Message',
+              detail: `${errorDetail}`,
+              life: 6000
+            })
           })
       }
     }

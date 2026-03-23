@@ -1,6 +1,7 @@
 # Page [ facebook/facebook_django/account/api.py ]
 # Django إستيراد إعدادات المشروع عشان نستخدمها في الكود
 from django.conf import settings
+import logging
 
 # إستيراد نموذج تغيير كلمة المرور
 # هنا بنستورد نموذج تغيير كلمة المرور الجاهز من Django
@@ -37,6 +38,8 @@ from .serializers import UserSerializer
 
 # FriendshipRequestSerializer
 
+logger = logging.getLogger(__name__)
+
 
 @api_view(["POST"])
 # لا توجد فئات مصادقة مطلوبة لهذه العملية
@@ -46,6 +49,14 @@ from .serializers import UserSerializer
 def signup(request):
 
     data = request.data
+    gender_value = data.get("gender")
+    if hasattr(data, "getlist"):
+        gender_list = data.getlist("gender")
+        if gender_list:
+            gender_value = gender_list[0]
+    if isinstance(gender_value, (list, tuple)):
+        gender_value = gender_value[0] if gender_value else ""
+
     # القيمة الافتراضية للرسالة هي نجاح
     message = "success"
 
@@ -55,7 +66,7 @@ def signup(request):
             "surname": data.get("surname"),
             "email": data.get("email"),
             "date_of_birth": data.get("date_of_birth"),
-            "gender": data.get("gender"),
+            "gender": gender_value,
             "password1": data.get("password1"),
             "password2": data.get("password2"),
         }
@@ -63,22 +74,34 @@ def signup(request):
 
     if form.is_valid():
         # حفظ النموذج إذا كان صالحًا واسترجاع كائن المستخدم
-        user = form.save()
+        user = form.save(commit=False)
         # تعيين حالة المستخدم على غير نشط
         user.is_active = False
         user.save()
 
         url = f"{settings.WEBSITE_URL}/activateemail/?email={user.email}&id={user.id}"
 
-        send_mail(
-            "Please verify your email",
-            f"The url for activating your account is: {url}",
-            "learncodingeasy@yahoo.com",
-            [user.email],
-            fail_silently=False,
-        )
-        # إضافة رسالة تأكيد إرسال البريد الإلكتروني
-        return JsonResponse({"message": message, "email_sent": True}, safe=False)
+        try:
+            send_mail(
+                "Please verify your email",
+                f"The url for activating your account is: {url}",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            return JsonResponse(
+                {"message": message, "email_sent": True, "auto_activated": False},
+                safe=False,
+            )
+        except Exception:
+            # إذا تعطل SMTP، فعّل المستخدم تلقائيًا بدل كسر التسجيل
+            logger.exception("Failed to send activation email for %s", user.email)
+            user.is_active = True
+            user.save(update_fields=["is_active"])
+            return JsonResponse(
+                {"message": message, "email_sent": False, "auto_activated": True},
+                safe=False,
+            )
     else:
         # JSON إذا كان النموذج غير صالح، استرجاع الأخطاء كرسالة
         message = form.errors.as_json()
