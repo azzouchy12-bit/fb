@@ -5,7 +5,8 @@ from django.contrib import admin
 from django.http import HttpResponse
 
 # URLs عشان أستخدمهم في تعريف مسارات الـ path و include بستورد
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.generic import TemplateView
 
 # بستورد الإعدادات
 # `settings` و`static`
@@ -34,4 +35,10 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # ده لإضافة مسارات الملفات الثابتة زي الصور،
     #  وبيبقى شغال بس لما الموقع بيكون في وضع التطوير (development)
+    # واجهة Vue على جذر الموقع مع fallback لروابط SPA
+    re_path(
+        r"^(?!api/|admin/|healthz$|activateemail/?$|static/|media/).*$",
+        TemplateView.as_view(template_name="index.html"),
+        name="frontend",
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -12,7 +12,7 @@ import ProfileView from '../views/Account/ProfileView.vue'
 import PageNotFound from "../views/PageNotFound/PageNotFound.vue";
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory('/'),
   routes: [
     {
       path: '/',

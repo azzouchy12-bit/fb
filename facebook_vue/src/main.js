@@ -24,7 +24,11 @@ library.add(fas, far, fab);
 // axios استيراد
 import axios from "axios"
 // Backend للاتصال مع ال URL افتراضية لجميع طلبات axios تعيين قاعدة
-axios.defaults.baseURL = "http://127.0.0.1:8000"
+const defaultApiBaseURL =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000"
+    : window.location.origin
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || defaultApiBaseURL
 
 // Prime Vue 
 import PrimeVue from "primevue/config";

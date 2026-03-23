@@ -864,7 +864,7 @@ function onFileSelect(event) {
                                 <div class="phone_number_data">
                                   <span class="image">
                                     <img
-                                      src="../../assets/iamge/icon/website.png"
+                                      src="../../assets/image/facebook_icon_512x512.png"
                                       class=""
                                       alt=""
                                     />
