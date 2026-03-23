@@ -11,28 +11,31 @@ This repository is already configured with:
 2. Create a new project from GitHub.
 3. Select this repository: `azzouchy12-bit/fb`.
 
-## 3) Add PostgreSQL
+## 3) Import suggested variables (optional but recommended)
+After linking GitHub, Railway can detect `.env.example` in repo root and show **Suggested Variables**.
+Import them with one click.
+
+## 4) Add PostgreSQL
 1. Inside the same Railway project, add a **PostgreSQL** service.
 2. Railway will inject `DATABASE_URL` automatically.
 
-## 4) Configure required environment variables
-In the web service Variables tab, set:
-- `SECRET_KEY` = any long random secret
-- `DEBUG` = `False`
-- `ALLOWED_HOSTS` = your Railway domain host (for example: `your-app.up.railway.app`)
-- `WEBSITE_URL` = full https URL (for example: `https://your-app.up.railway.app`)
-- `CORS_ALLOWED_ORIGINS` = your frontend URL(s), comma-separated
-- `CSRF_TRUSTED_ORIGINS` = your frontend URL(s), comma-separated
+## 5) Deploy without manual variable setup
+The project now auto-derives core settings on Railway using built-in variables like:
+- `RAILWAY_PUBLIC_DOMAIN`
+- `RAILWAY_PRIVATE_DOMAIN`
+- `RAILWAY_PROJECT_ID`
+- `RAILWAY_SERVICE_ID`
+- `RAILWAY_ENVIRONMENT_ID`
 
-Optional email settings are available in `.env.example`.
+You only need to set email variables if you want real SMTP email sending.
 
-## 5) Deploy
+## 6) Deploy
 Railway will run:
 - `python manage.py migrate`
 - `python manage.py collectstatic --noinput`
 - `gunicorn facebook_django.wsgi:application --bind 0.0.0.0:$PORT`
 
-## 6) Verify
+## 7) Verify
 After deploy:
 - Open `/admin/login/` on your Railway URL for a quick health check.
 - API base path is `/api/`.
