@@ -21,6 +21,8 @@ from rest_framework.decorators import (
     authentication_classes,
     permission_classes,
 )
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 # إستيراد دالة إنشاء الإشعارات
 # from notification.utils import create_notification
@@ -39,6 +41,36 @@ from .serializers import UserSerializer
 # FriendshipRequestSerializer
 
 logger = logging.getLogger(__name__)
+
+
+def is_smtp_configured():
+    return (
+        settings.EMAIL_BACKEND == "django.core.mail.backends.smtp.EmailBackend"
+        and bool(getattr(settings, "EMAIL_HOST_USER", ""))
+        and bool(getattr(settings, "EMAIL_HOST_PASSWORD", ""))
+    )
+
+
+class ActivateAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        email = attrs.get(self.username_field)
+        password = attrs.get("password")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            user = None
+
+        # Resolve legacy state: activate old accounts once correct credentials are provided.
+        if user and not user.is_active and password and user.check_password(password):
+            user.is_active = True
+            user.save(update_fields=["is_active"])
+
+        return super().validate(attrs)
+
+
+class ActivateAwareTokenObtainPairView(TokenObtainPairView):
+    serializer_class = ActivateAwareTokenObtainPairSerializer
 
 
 @api_view(["POST"])
@@ -75,7 +107,16 @@ def signup(request):
     if form.is_valid():
         # حفظ النموذج إذا كان صالحًا واسترجاع كائن المستخدم
         user = form.save(commit=False)
-        # تعيين حالة المستخدم على غير نشط
+        # فعّل المستخدم مباشرة إذا لم يتم إعداد SMTP
+        if not is_smtp_configured():
+            user.is_active = True
+            user.save()
+            return JsonResponse(
+                {"message": message, "email_sent": False, "auto_activated": True},
+                safe=False,
+            )
+
+        # تعيين حالة المستخدم على غير نشط إلى حين تأكيد البريد
         user.is_active = False
         user.save()
 

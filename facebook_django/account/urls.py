@@ -2,9 +2,9 @@
 # URLs عشان أستخدمهم في تعريف مسارات الـ path بستورد
 from django.urls import path
 
-# Simple JWT من مكتبة TokenObtainPairView و TokenRefreshView بستورد
+# Simple JWT من مكتبة TokenRefreshView بستورد
 # login والـ token refresh عشان أستخدمهم في الـ  DRF الخاصة بالـ
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 # اللى في نفس المجلد عشان أستخدم الفيوهات اللى فيه api بستورد كل حاجة من ملف
 from . import api
@@ -17,7 +17,7 @@ urlpatterns = [
     # المسار ده مسئول عن عملية تسجيل حساب جديد
     path("signup/", api.signup, name="signup"),
     # tokens (access و refresh) وإصدار الـ login المسار ده مسئول عن عملية الـ
-    path("login/", TokenObtainPairView.as_view(), name="token_obtain"),
+    path("login/", api.ActivateAwareTokenObtainPairView.as_view(), name="token_obtain"),
     # refresh token باستخدام الـ access token المسار ده مسئول عن تجديد الـ
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # ___________________________
