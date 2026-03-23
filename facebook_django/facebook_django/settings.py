@@ -1,88 +1,83 @@
-# Page [ facebook/facebook_django/facebook_django/settings.py ]
-
-# استيراد مكتبة timedelta عشان نحدد مدة صلاحية التوكين
 from datetime import timedelta
-
+import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+import dj_database_url
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-ev-)0(ku43nkvmh8pg)=227w1r2y*my=j5o0y5)jbvxw7*=ag%"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-# ALLOWED_HOSTS ده المتغير اللي بنحدد فيه الدومينات أو الآيبيهات اللي مسموح لها تشغل المشروع
-ALLOWED_HOSTS = []
-
-# URL أو على سيرفر حقيقي (localhost) الموقع اللي بنشتغل عليه سواء كان محلي
-WEBSITE_URL = "http://127.0.0.1:8000"
-
-# EMAIL_BACKEND ده اللي بيحدد طريقة إرسال الإيميلات من خلال
-# Django، هنا مختار انه يطبع الإيميلات في الكونسل
-# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-# Django، هنا سيتم إرسال الرسائل الإيميلات الى الإيميلات
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# مزود SMTP الخاص بك (في هذه الحالة Gmail)
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-# البريد الإلكتروني الذي سيتم إرسال الرسائل منه
-EMAIL_HOST_USER = "learncodingeasy0100@gmail.com"
-# كلمة مرور البريد الإلكتروني
-EMAIL_HOST_PASSWORD = "uxcg nuae kfjq txre"
-DEFAULT_FROM_EMAIL = "learncodingeasy0100@gmail.com"
+def env_bool(name, default=False):
+    return os.getenv(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
-# AUTH_USER_MODEL ده اللي بنحدد فيه موديل المستخدمين اللي شغالين عليه
+def env_list(name, default=""):
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+IS_RAILWAY = os.getenv("RAILWAY_ENVIRONMENT") is not None
+
+
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-me")
+DEBUG = env_bool("DEBUG", not IS_RAILWAY)
+
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "127.0.0.1,localhost")
+railway_host = os.getenv("RAILWAY_STATIC_URL")
+if railway_host and railway_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(railway_host)
+
+default_website_url = (
+    f"https://{railway_host}" if railway_host else "http://127.0.0.1:8000"
+)
+WEBSITE_URL = os.getenv("WEBSITE_URL", default_website_url)
+
+
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@example.com"
+)
+
+
 AUTH_USER_MODEL = "account.User"
 
-# SIMPLE_JWT دي إعدادات مكتبة JWT اللي بنستخدمها لإدارة التوكينات
 SIMPLE_JWT = {
-    # ACCESS_TOKEN_LIFETIME ده اللي بيحدد مدة صلاحية توكين الدخول
-    # (Access Token)، هنا مدته 30 يوم
     "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
-    # REFRESH_TOKEN_LIFETIME ده اللي بيحدد مدة صلاحية توكين التحديث
-    # (Refresh Token)، هنا مدته 180 يوم
     "REFRESH_TOKEN_LIFETIME": timedelta(days=180),
-    # ROTATE_REFRESH_TOKENS ده اللي بيحدد لو التوكين بيتجدد مع كل تحديث للتوكين ولا لأ، هنا مش بيتجدد
     "ROTATE_REFRESH_TOKENS": False,
 }
 
-# REST_FRAMEWORK دي إعدادات مكتبة Django Rest Framework
 REST_FRAMEWORK = {
-    # DEFAULT_AUTHENTICATION_CLASSES دي اللي بتحدد نوع المصادقة الافتراضية اللي هتكون JWT
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    # DEFAULT_PERMISSION_CLASSES دي بتحدد الإذن الافتراضي اللي هو أن المستخدم لازم يكون مصدق عليه (Authenticated)
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
-# CORS_ALLOWED_ORIGINS دي بنحدد فيها الأصول المسموح لها تتواصل مع السيرفر بتاعنا
-CORS_ALLOWED_ORIGINS = [
-    # أصل خاص بـ Vue.js على بورت 5173
-    "http://localhost:5173",
-    # أصل خاص بـ Vue.js على بورت 5174
-    "http://localhost:5174",
-]
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174"
+)
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://localhost:5174"
+)
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
 
-# CSRF_TRUSTED_ORIGINS دي بنحدد فيها الأصول الموثوقة اللي بنسمح لها تستخدم
-# CSRF مع السيرفر
-CSRF_TRUSTED_ORIGINS = [
-    # أصل خاص بـ Vue.js على بورت 5173
-    "http://localhost:5173",
-    # أصل خاص بـ Vue.js على بورت 5174
-    "http://localhost:5174",
-]
+if railway_host:
+    railway_origin = f"https://{railway_host}"
+    if railway_origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(railway_origin)
+    if railway_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(railway_origin)
 
-# Application definition
-# Django اللي متضافه لمشروع (Libraries) والمكتبات (Apps) دي قائمة بالتطبيقات
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -90,18 +85,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Apps
     "account",
-    # Libraries
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
 ]
 
-# 🛡️ (requests) هي عبارة عن مكونات أو طبقات بتتعامل مع الطلبات Middleware الـ
-# اللي بتجيلك من المستخدمين قبل ما توصل لوجهتها النهائية في السرفر
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -131,20 +123,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "facebook_django.wsgi.application"
 
+default_sqlite_url = f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}"
+database_url = os.getenv("DATABASE_URL", default_sqlite_url)
+DATABASES = {"default": dj_database_url.parse(database_url, conn_max_age=600)}
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+if database_url.startswith("postgres"):
+    DATABASES["default"]["OPTIONS"] = {"sslmode": os.getenv("PGSSLMODE", "require")}
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -162,9 +147,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.0/topics/i18n/
-
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
@@ -174,17 +156,19 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# - 🌐 `STATIC_URL` بيحدد الرابط اللي هتعرض عليه الملفات الثابتة.
-STATIC_URL = "static/"
-# - 📷 `MEDIA_URL` بيحدد الرابط اللي هتعرض عليه ملفات الميديا اللي بيرفعها المستخدمين.
-MEDIA_URL = "media/"
-# - 💾 `MEDIA_ROOT` بيحدد مكان تخزين ملفات الميديا الفعلي على جهاز السيرفر
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+
+if IS_RAILWAY and not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
