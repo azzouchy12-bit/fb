@@ -93,17 +93,24 @@ WEBSITE_URL = normalize_origin(
     )
 )
 
-ALLOWED_HOSTS = unique(
-    env_list("ALLOWED_HOSTS", "")
-    + [
-        "127.0.0.1",
-        "localhost",
-        railway_public_domain,
-        railway_static_domain,
-        railway_private_domain,
-        normalize_host(WEBSITE_URL),
-    ]
-)
+manual_allowed_hosts = env_list("ALLOWED_HOSTS", "")
+if manual_allowed_hosts:
+    ALLOWED_HOSTS = unique(
+        manual_allowed_hosts
+        + [
+            "127.0.0.1",
+            "localhost",
+            railway_public_domain,
+            railway_static_domain,
+            railway_private_domain,
+            normalize_host(WEBSITE_URL),
+        ]
+    )
+elif IS_RAILWAY:
+    # Railway healthcheck host can vary; wildcard avoids false negatives.
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 
 EMAIL_BACKEND = os.getenv(
@@ -250,7 +257,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 if IS_RAILWAY and not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
