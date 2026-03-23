@@ -2,6 +2,7 @@
 # djangoمن admin بعمل استيراد لـ
 # Django عشان اقدر أستخدم لوحة التحكم الخاصة بـ
 from django.contrib import admin
+from django.http import HttpResponse
 
 # URLs عشان أستخدمهم في تعريف مسارات الـ path و include بستورد
 from django.urls import path, include
@@ -15,9 +16,15 @@ from django.conf.urls.static import static
 # بستورد الفيو اللى هستخدمه لتفعيل الإيميل
 from account.views import activateemail
 
+
+def healthz(request):
+    return HttpResponse("ok", status=200)
+
+
 # هنا بقوم بتعريف كل المسارات الـ
 # URLs اللي الموقع هيستخدمها
 urlpatterns = [
+    path("healthz", healthz),
     # include وبستخدم /api/،و اللى كل حاجة فيه هتبقى تحت API مسار الـ
     # account اللى اسمها app عشان أضيف كل المسارات الخاصة بالـ
     path("api/", include("account.urls")),

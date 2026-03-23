@@ -86,31 +86,18 @@ def generated_secret_key():
 SECRET_KEY = os.getenv("SECRET_KEY") or generated_secret_key()
 DEBUG = env_bool("DEBUG", not IS_RAILWAY)
 
-WEBSITE_URL = normalize_origin(
-    os.getenv(
-        "WEBSITE_URL",
-        railway_public_domain or railway_static_domain or "http://127.0.0.1:8000",
-    )
-)
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+for railway_host in (railway_public_domain, railway_static_domain, railway_private_domain):
+    if railway_host and railway_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(railway_host)
 
-manual_allowed_hosts = env_list("ALLOWED_HOSTS", "")
-if manual_allowed_hosts:
-    ALLOWED_HOSTS = unique(
-        manual_allowed_hosts
-        + [
-            "127.0.0.1",
-            "localhost",
-            railway_public_domain,
-            railway_static_domain,
-            railway_private_domain,
-            normalize_host(WEBSITE_URL),
-        ]
-    )
-elif IS_RAILWAY:
-    # Railway healthcheck host can vary; wildcard avoids false negatives.
-    ALLOWED_HOSTS = ["*"]
-else:
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+WEBSITE_URL = os.getenv(
+    "WEBSITE_URL", f"https://{railway_public_domain}" if railway_public_domain else ""
+)
 
 
 EMAIL_BACKEND = os.getenv(
@@ -162,11 +149,7 @@ CORS_ALLOW_ALL_ORIGINS = env_bool(
     "CORS_ALLOW_ALL_ORIGINS", IS_RAILWAY and not CORS_ALLOWED_ORIGINS
 )
 
-CSRF_TRUSTED_ORIGINS = unique(
-    [normalize_origin(origin) for origin in env_list("CSRF_TRUSTED_ORIGINS", "")]
-    + CORS_ALLOWED_ORIGINS
-    + [WEBSITE_URL]
-)
+CSRF_TRUSTED_ORIGINS = [WEBSITE_URL] if WEBSITE_URL else []
 
 
 INSTALLED_APPS = [
